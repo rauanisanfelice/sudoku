@@ -1,0 +1,2 @@
+# sudoku
+Python game Sudoku
