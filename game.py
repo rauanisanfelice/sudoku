@@ -26,7 +26,10 @@ COLOR_ACTIVE = (255, 255, 255)
 SMALL_SQUARE_SIZE = SIZE_SQUARE + (SIZE_DIVISION_SMALL_SQUARE * 2)
 BIG_SQUARE_SIZE = (SMALL_SQUARE_SIZE * 3) + SIZE_DIVISION_BIG_SQUARE
 
-GRID =[ 
+ERROS = 0
+NUM_FALTANTES = 81
+NUM_PREENCHIDOS = 0
+GRID = [
     [8, 7, 9, 6, 5, 1, 3, 2, 4],
     [5, 2, 3, 7, 4, 9, 1, 8, 6],
     [1, 6, 4, 2, 3, 8, 7, 9, 5],
@@ -38,15 +41,18 @@ GRID =[
     [4, 3, 1, 9, 7, 5, 2, 6, 8],
     [9, 5, 6, 3, 8, 2, 4, 7, 1],
     [7, 8, 2, 4, 1, 6, 5, 3, 9]
-] 
+]
 
 class InputBox:
 
+
     def __init__(self, x:float, y:float, w:float, h:float, position:list, text:str=''):
+        global NUM_FALTANTES, NUM_PREENCHIDOS, ERROS
         
         if text == "":
             if random.choices([0, 1], weights = [10, 90], k=1)[0] == 1:
                 text = str(GRID[position[0]][position[1]])
+                NUM_FALTANTES -= 1
         
         self.rect = pygame.Rect(x, y, w, h)
         self.position = position
@@ -85,10 +91,14 @@ class InputBox:
         pygame.draw.rect(screen, self.color, self.rect, SIZE_DIVISION_SMALL_SQUARE)
     
     def check(self):
+        global NUM_FALTANTES, NUM_PREENCHIDOS, ERROS
         if str(GRID[self.position[0]][self.position[1]]) != self.text:
+            ERROS += 1
             self.color = COLOR_RED
             self.error = True
         else:
+            NUM_FALTANTES -= 1
+            NUM_PREENCHIDOS += 1
             self.color = COLOR_ACTIVE
             self.error = False
 
@@ -120,9 +130,20 @@ def draw_scenario():
     pygame.draw.rect(screen, COLOR_BLACK, (0, SCREEN_GAME_HEIGHT - SIZE_DIVISION_BIG_SQUARE, SCREEN_GAME_HEIGHT, SIZE_DIVISION_BIG_SQUARE))
 
 
+def update_info():
+    global ERROS, NUM_FALTANTES, NUM_PREENCHIDOS
+
+    height = SCREEN_GAME_HEIGHT + 20
+    screen.blit(FONT.render(f'Num faltantes: {NUM_FALTANTES}', True, COLOR_BLACK), (height, 20))
+    screen.blit(FONT.render(f'Num preenchidos: {NUM_PREENCHIDOS}', True, COLOR_BLACK), (height, 50))
+    screen.blit(FONT.render(f'Erros: {ERROS}', True, COLOR_BLACK), (height, 80))
+
+
 # GAME
 def start_the_game():
-
+    
+    global NUM_FALTANTES
+    
     # FPS
     clock = pygame.time.Clock()
     draw_scenario()
@@ -246,8 +267,15 @@ def start_the_game():
 
         pygame.display.flip()
         
+        # ATUALIZA INFO
+        update_info()
+
         # ATUALIZA DA TELA
         pygame.display.update()
+
+        if NUM_FALTANTES == 0:
+            break
+
 
 # PROPIEDADES SCREEN
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
