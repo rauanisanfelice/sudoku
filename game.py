@@ -42,40 +42,55 @@ GRID =[
 
 class InputBox:
 
-    def __init__(self, x:float, y:float, w:float, h:float, position, text:str=''):
+    def __init__(self, x:float, y:float, w:float, h:float, position:list, text:str=''):
+        
         if text == "":
-            text = str(GRID[position[0]][position[1]])
+            if random.choices([0, 1], weights = [10, 90], k=1)[0] == 1:
+                text = str(GRID[position[0]][position[1]])
+        
         self.rect = pygame.Rect(x, y, w, h)
+        self.position = position
         self.color = COLOR_INACTIVE
         self.text = text
         self.txt_surface = FONT.render(text, True, self.color)
         self.active = False
+        self.error = False
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             # If the user clicked on the input_box rect.
             if self.rect.collidepoint(event.pos):
-                if self.text == '':
-                    self.active = not self.active
+                self.active = not self.active
             else:
                 self.active = False
             # Change the current color of the input box.
             self.color = COLOR_ACTIVE if self.active else COLOR_INACTIVE
+        
         if event.type == pygame.KEYDOWN:
             if self.active:
                 if event.key == pygame.K_ESCAPE:
                     self.active = False
                     self.color = COLOR_ACTIVE if self.active else COLOR_INACTIVE
+                
                 else:
-                    if len(self.text) == 0:
-                        self.text += event.unicode
-                # Re-render the text.
-                self.txt_surface = FONT.render(self.text, True, self.color)
+                    if self.text == "" or self.error == True:
+                        self.text = event.unicode
+                        self.check()
+
+                        # Re-render the text
+                        self.txt_surface = FONT.render(self.text, True, self.color)
 
     def draw(self, screen):
-        # Blit the text.
         screen.blit(self.txt_surface, (self.rect.x + 25, self.rect.y + 20))
         pygame.draw.rect(screen, self.color, self.rect, SIZE_DIVISION_SMALL_SQUARE)
+    
+    def check(self):
+        if str(GRID[self.position[0]][self.position[1]]) != self.text:
+            self.color = COLOR_RED
+            self.error = True
+        else:
+            self.color = COLOR_ACTIVE
+            self.error = False
 
 
 
@@ -225,6 +240,7 @@ def start_the_game():
             for box in input_boxes:
                 box.handle_event(event)
 
+        screen.fill((30, 30, 30))
         for box in input_boxes:
             box.draw(screen)
 
@@ -233,8 +249,7 @@ def start_the_game():
         # ATUALIZA DA TELA
         pygame.display.update()
 
-
-# INICIA JOGO COM SCREEN
+# PROPIEDADES SCREEN
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 # MENU
