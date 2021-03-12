@@ -55,6 +55,7 @@ class Grid:
     def initialize(self):
         
         sequencia = [
+            { "col": None, "row": 0},
             { "col": 8, "row": None},
             { "col": None, "row": 8},
             { "col": 0, "row": None},
@@ -65,31 +66,30 @@ class Grid:
             { "col": None, "row": 2},
             { "col": 6, "row": None},
             { "col": None, "row": 6},
-            { "col": 2, "row": None},
-            { "col": None, "row": 3},
-            { "col": 5, "row": None},
-            { "col": None, "row": 5},
-            { "col": 3, "row": None},
         ]
 
         list_int = [1, 2, 3, 4, 5, 6, 7, 8, 9]
         random.shuffle(list_int)
-        qdr = -1 
+        col = 2
+        row = 3
         for i, item in enumerate(list_int):
-            if i % 3 == 0:
-                qdr += 1
+            
+            if i % 3 == 0 and i != 0:
+                row += 1
+                col = 2
+            col += 1
+
             self.grid.append({
                 "text": item,
-                "row": 0,
-                "column": i,
-                "quadrante": qdr,
+                "row": row,
+                "column": col,
+                "quadrante": 4,
                 "preeenchido": False,
                 "error": False,
             })
-        
+
         get_text = lambda x: x['text']
         get_column = lambda x: x['column']
-        filter_qdr = lambda x: x['quadrante'] == qdr
         filter_row = lambda x: x['row'] == row
         filter_col = lambda x: x['column'] == col
         
@@ -115,8 +115,10 @@ class Grid:
                     nums_in_col = list(map(get_text, list_nums_in_col))
                     nums_faltantes = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(nums_in_col))
 
+                    # row = max(list_nums_in_col, key=lambda x: x["row"])["row"] + 1
+                    row = self.get_index_row_empty(col)
+                    
                     # REMOVE NUMEROS QUE JA POSSUI NA LINHA
-                    row = max(list_nums_in_col, key=lambda x: x["row"])["row"] + 1
                     list_nums_in_row = list(filter(filter_row, self.grid))
                     nums_in_row = list(map(get_text, list_nums_in_row))
                     nums_faltantes = list(set(nums_faltantes) - set(nums_in_row))
@@ -126,10 +128,17 @@ class Grid:
                     qdr  = int(col / 3) + (row_qdr * 3)
 
                     # REMOVE NUMEROS QUE JA POSSUI NO QUADRANTE
-                    list_nums_in_qdr = list(filter(filter_qdr, self.grid))
-                    nums_in_qdr = list(map(get_text, list_nums_in_qdr))
+                    nums_in_qdr = self.get_nums_qdr(qdr)
                     nums_faltantes = list(set(nums_faltantes) - set(nums_in_qdr))
+                    
+                    #############################################################
+                    list_nums_priority = self.nums_priority(col, row, qdr)
+                    if list_nums_priority:
+                        if list(set(nums_faltantes).intersection(list_nums_priority)):
+                            nums_faltantes_priority = list(set(nums_faltantes).intersection(list_nums_priority))
+                            nums_faltantes = nums_faltantes_priority
 
+                    #############################################################
                     self.grid.append({
                         "text": random.choices(nums_faltantes)[0],
                         "row": row,
@@ -139,6 +148,12 @@ class Grid:
                         "error": False,
                     })
 
+                    print("")
+                    print("")
+                    print("")
+                    self.order_grid()
+                    self.print_grid()
+                    
             elif item['row'] is not None:
                 
                 # REMOVE NUMEROS QUE JA POSSUI NA LINHA
@@ -154,7 +169,7 @@ class Grid:
                     nums_in_row = list(map(get_text, list_nums_in_row))
                     nums_faltantes = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(nums_in_row))
 
-                    col = min(list_nums_in_row, key=lambda x: x["column"])["column"] - 1
+                    col = self.get_index_col_empty(row)
 
                     # REMOVE NUMEROS QUE JA POSSUI NA COLUNA
                     list_nums_in_col = list(filter(filter_col, self.grid))
@@ -162,14 +177,21 @@ class Grid:
                     nums_faltantes = list(set(nums_faltantes) - set(nums_in_col))
 
                     # DESCOBRE QUADRANTE
-                    row_qdr  = int(row / 3)
-                    qdr  = int(col / 3) + (row_qdr * 3)
+                    row_qdr = int(row / 3)
+                    qdr = int(col / 3) + (row_qdr * 3)
 
                     # REMOVE NUMEROS QUE JA POSSUI NO QUADRANTE
-                    list_nums_in_qdr = list(filter(filter_qdr, self.grid))
-                    nums_in_qdr = list(map(get_text, list_nums_in_qdr))
+                    nums_in_qdr = self.get_nums_qdr(qdr)
                     nums_faltantes = list(set(nums_faltantes) - set(nums_in_qdr))
 
+                    #############################################################
+                    list_nums_priority = self.nums_priority(col, row, qdr, False)
+                    if list_nums_priority:
+                        if list(set(nums_faltantes).intersection(list_nums_priority)):
+                            nums_faltantes_priority = list(set(nums_faltantes).intersection(list_nums_priority))
+                            nums_faltantes = nums_faltantes_priority
+
+                    #############################################################
                     self.grid.append({
                         "text": random.choices(nums_faltantes)[0],
                         "row": row,
@@ -178,11 +200,13 @@ class Grid:
                         "preeenchido": False,
                         "error": False,
                     })
-
+                    
                     print("")
                     print("")
                     print("")
+                    self.order_grid()
                     self.print_grid()
+
 
             print("")
             print("")
@@ -191,34 +215,194 @@ class Grid:
             self.print_grid()
 
         return self.grid
-
-    def num_available_col(self, num:int, col:int):
-        
-        filter_col = lambda x: x['text'] == num
-        map_nums_col = lambda x: x['column']
-        
-        nums_col = list(filter(filter_col, self.grid))
-        nums_text_col = list(map(map_nums_col, nums_col))
-        
-        if col in nums_text_col:
-            return False
-        return True
     
-    def search_available_qdrs(self, num):
+    def nums_priority(self, col:int, row:int, qdr:int, is_col:bool=True) -> list:
         
-        filter_qdr = lambda x: x['quadrante'] == index_qdr
-        map_num_qdr = lambda x: x['text']
-        result = []
+        print("")
+        print("")
+        print("")
+        self.print_grid()
 
-        for index_qdr in range(0, 3, 1):
+        nums_priority_qdrs = []
+        nums_priority_cols = []
+        nums_priority_rows = []
+        nums_in_col_01 = []
+        nums_in_col_02 = []
 
-            nums_qdr = list(filter(filter_qdr, self.grid))
-            nums_text_qdr = list(map(map_num_qdr, nums_qdr))
+        #############################################################
+        # DA PRIORIDADE NOS NUMEROS DOS PROXIMOS QUADRANTES
+        if is_col:
+            if qdr in [0, 1, 2]:
+                nums_in_qdr_01 = self.get_nums_qdr(qdr + 3, col=col)
+                nums_in_qdr_02 = self.get_nums_qdr(qdr + 6, col=col)
+            
+            elif qdr in [3, 4, 5]:
+                nums_in_qdr_01 = self.get_nums_qdr(qdr - 3, col=col)
+                nums_in_qdr_02 = self.get_nums_qdr(qdr + 3, col=col)
+            
+            else:
+                nums_in_qdr_01 = self.get_nums_qdr(qdr - 3, col=col)
+                nums_in_qdr_02 = self.get_nums_qdr(qdr - 6, col=col)
 
-            if num not in nums_text_qdr:
-                result.append(index_qdr)
+        else:
 
-        return result
+            if qdr % 3 == 0:
+                nums_in_qdr_01 = self.get_nums_qdr(qdr + 1, row=row)
+                nums_in_qdr_02 = self.get_nums_qdr(qdr + 2, row=row)
+
+            elif qdr in [1, 4, 7]:
+                nums_in_qdr_01 = self.get_nums_qdr(qdr - 1, row=row)
+                nums_in_qdr_02 = self.get_nums_qdr(qdr + 1, row=row)
+        
+            elif qdr in [2, 5, 8]:
+                nums_in_qdr_01 = self.get_nums_qdr(qdr - 1, row=row)
+                nums_in_qdr_02 = self.get_nums_qdr(qdr - 2, row=row)
+
+        nums_priority_qdrs = list(set(nums_in_qdr_01).intersection(nums_in_qdr_02))
+        
+        # REMOVE NUMEROS JA UTILIZADOS
+        nums_priority_qdrs = self.remove_nums_used(nums_priority_qdrs, qdr, col, row)
+        nums_in_qdr_01 = self.remove_nums_used(nums_in_qdr_01, qdr, col, row)
+        nums_in_qdr_02 = self.remove_nums_used(nums_in_qdr_02, qdr, col, row)
+
+        #############################################################
+        # DA PRIORIDADE NOS NUMEROS DAS PROXIMAS COLUNAS
+        if col % 3 == 0:
+            nums_in_col_01 = self.get_nums_col(col + 1, row)
+            nums_in_col_02 = self.get_nums_col(col + 2, row)
+            
+            if nums_in_col_01 or nums_in_col_02:
+                nums_priority_cols = list(set(nums_in_col_01).intersection(nums_in_col_02))
+
+        elif col in [1, 4, 7]:
+            
+            nums_priority_cols = self.get_nums_col(col + 1, row)
+
+        elif col in [2, 5, 8]:
+            
+            nums_in_col_01 = self.get_nums_col(col - 1, row)
+            nums_in_col_02 = self.get_nums_col(col - 2, row)
+            
+            if nums_in_col_01 or nums_in_col_02:
+                nums_priority_cols = list(set(nums_in_col_01).intersection(nums_in_col_02))
+        
+        # REMOVE NUMEROS JA UTILIZADOS
+        nums_priority_cols = self.remove_nums_used(nums_priority_cols, qdr, col, row)
+        nums_in_col_01 = self.remove_nums_used(nums_in_col_01, qdr, col, row)
+        nums_in_col_02 = self.remove_nums_used(nums_in_col_02, qdr, col, row)
+
+
+        #############################################################
+        # DA PRIORIDADE NOS NUMEROS DAS PROXIMAS LINHAS
+        if row % 3 == 0:
+            nums_in_row_01 = self.get_nums_row(col, row + 1)
+            nums_in_row_02 = self.get_nums_row(col, row + 2)
+            
+            if nums_in_row_01 or nums_in_row_02:
+                nums_priority_rows = list(set(nums_in_row_01).intersection(nums_in_row_02))
+
+        elif row in [1, 4, 7]:
+            
+            nums_priority_rows = self.get_nums_row(col, row + 1)
+
+        elif row in [2, 5, 8]:
+            
+            nums_in_row_01 = self.get_nums_row(col, row - 1)
+            nums_in_row_02 = self.get_nums_row(col, row - 2)
+            
+            if nums_in_row_01 or nums_in_row_02:
+                nums_priority_rows = list(set(nums_in_row_01).intersection(nums_in_row_02))
+        
+        # REMOVE NUMEROS JA UTILIZADOS
+        nums_priority_rows = self.remove_nums_used(nums_priority_rows, qdr, col, row)
+
+        # ANALISA O CENARIO
+        return_nums_priority = []
+        if list(set(nums_priority_qdrs).intersection(nums_priority_cols).intersection(nums_priority_rows)):
+            print("00")
+            return_nums_priority = list(set(nums_priority_qdrs).intersection(nums_priority_cols).intersection(nums_priority_rows))
+        
+        else:
+            if nums_priority_cols:
+                if list(set(nums_priority_cols).intersection(nums_in_qdr_02)):
+                    print("01")
+                    return_nums_priority = list(set(nums_priority_cols).intersection(nums_in_qdr_02))
+                else:
+                    print("02")
+                    return_nums_priority = nums_priority_cols
+            elif list(set(nums_in_qdr_01).intersection(nums_in_qdr_02)):
+                print("03")
+                return_nums_priority = list(set(nums_in_qdr_01).intersection(nums_in_qdr_02))
+            elif list(set(nums_in_qdr_02).intersection(nums_priority_cols)):
+                print("04")
+                return_nums_priority = list(set(nums_in_qdr_02).intersection(nums_priority_cols))
+            elif list(set(nums_in_qdr_01).intersection(nums_priority_cols)):
+                print("05")
+                return_nums_priority = list(set(nums_in_qdr_01).intersection(nums_priority_cols))
+            elif nums_in_qdr_02:
+                print("06")
+                return_nums_priority = nums_in_qdr_02
+        
+        return return_nums_priority
+    
+    def remove_nums_used(self, list_search:list, qdr:int, col:int, row:int) -> list:
+        
+        list_return = []
+        nums_in_col = self.get_nums_col(col, 9)
+        nums_in_row = self.get_nums_row(9, row)
+        nums_in_qdr = self.get_nums_qdr(qdr, 9)
+        
+        for item in list_search:
+            if item not in nums_in_col and item not in nums_in_row and item not in nums_in_qdr:
+                list_return.append(item)
+        
+        return list_return
+
+    def get_nums_col(self, col:int, row:int) -> list:
+        filter_col = lambda x: x['column'] == col and x['row'] != row
+        get_text = lambda x: x['text']
+
+        list_nums_in_col = list(filter(filter_col, self.grid))
+        return list(map(get_text, list_nums_in_col))
+
+    def get_nums_row(self, col:int, row:int) -> list:
+        filter_row = lambda x: x['row'] == row and x['column'] != col
+        get_text = lambda x: x['text']
+
+        list_nums_in_row = list(filter(filter_row, self.grid))
+        return list(map(get_text, list_nums_in_row))
+
+    def get_nums_qdr(self, qdr:int, col:int=None, row:int=None) -> list:
+        filter_qdr_col = lambda x: x['quadrante'] == qdr and x['column'] != col
+        filter_qdr_row = lambda x: x['quadrante'] == qdr and x['row'] != row
+        get_text = lambda x: x['text']
+        
+        if col is not None:
+            list_nums_in_qdr = list(filter(filter_qdr_col, self.grid))
+        else:
+            list_nums_in_qdr = list(filter(filter_qdr_row, self.grid))
+
+        return list(map(get_text, list_nums_in_qdr))
+    
+    def get_index_row_empty(self, col:int) -> int:
+        nums = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        nums_find = []
+        for item in self.grid:
+            if item["column"] == col:
+                nums_find.append(item["row"])
+        result = list(set(nums) - set(nums_find))
+        result = sorted(result)
+        return result[0]
+    
+    def get_index_col_empty(self, row:int) -> int:
+        nums = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        nums_find = []
+        for item in self.grid:
+            if item["row"] == row:
+                nums_find.append(item["column"])
+        result = list(set(nums) - set(nums_find))
+        result = sorted(result)
+        return result[0]
 
     def order_grid(self):
         self.grid = sorted(self.grid, key=lambda x: (x["row"], x["column"]))
