@@ -53,23 +53,10 @@ class Grid:
         self.grid = []
     
     def initialize(self):
-        
-        sequencia = [
-            { "col": None, "row": 0},
-            { "col": 8, "row": None},
-            { "col": None, "row": 8},
-            { "col": 0, "row": None},
-            { "col": None, "row": 1},
-            { "col": 7, "row": None},
-            { "col": None, "row": 7},
-            { "col": 1, "row": None},
-            { "col": None, "row": 2},
-            { "col": 6, "row": None},
-            { "col": None, "row": 6},
-        ]
 
         list_int = [1, 2, 3, 4, 5, 6, 7, 8, 9]
         random.shuffle(list_int)
+
         col = 2
         row = 3
         for i, item in enumerate(list_int):
@@ -88,124 +75,121 @@ class Grid:
                 "error": False,
             })
 
-        get_text = lambda x: x['text']
-        get_column = lambda x: x['column']
-        filter_row = lambda x: x['row'] == row
-        filter_col = lambda x: x['column'] == col
-        
-        row_qdr = 0
-        firts = True
-        
-        for item in sequencia:
-            
-            # CENARIO DE COLUNA
-            if item['col'] is not None:
+        for num_atual in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+            for index_quadrante in range(0, 9, 1):
                 
-                # REMOVE NUMEROS QUE JA POSSUI NA COLUNA
-                col = item['col']
-                list_nums_in_col = list(filter(filter_col, self.grid))
-                nums_in_col = list(map(get_text, list_nums_in_col))
-                nums_faltantes = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(nums_in_col))
-                total_nums_faltantes = len(nums_faltantes)
-
-                for i in range(0, total_nums_faltantes, 1):
-
-                    # ATUALIZA E REMOVE NUMEROS QUE JA POSSUI NA COLUNA
-                    list_nums_in_col = list(filter(filter_col, self.grid))
-                    nums_in_col = list(map(get_text, list_nums_in_col))
-                    nums_faltantes = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(nums_in_col))
-
-                    # row = max(list_nums_in_col, key=lambda x: x["row"])["row"] + 1
-                    row = self.get_index_row_empty(col)
-                    
-                    # REMOVE NUMEROS QUE JA POSSUI NA LINHA
-                    list_nums_in_row = list(filter(filter_row, self.grid))
-                    nums_in_row = list(map(get_text, list_nums_in_row))
-                    nums_faltantes = list(set(nums_faltantes) - set(nums_in_row))
-                    
-                    # DESCOBRE QUADRANTE
-                    row_qdr  = int(row / 3)
-                    qdr  = int(col / 3) + (row_qdr * 3)
-
-                    # REMOVE NUMEROS QUE JA POSSUI NO QUADRANTE
-                    nums_in_qdr = self.get_nums_qdr(qdr)
-                    nums_faltantes = list(set(nums_faltantes) - set(nums_in_qdr))
-                    
-                    #############################################################
-                    list_nums_priority = self.nums_priority(col, row, qdr)
-                    if list_nums_priority:
-                        if list(set(nums_faltantes).intersection(list_nums_priority)):
-                            nums_faltantes_priority = list(set(nums_faltantes).intersection(list_nums_priority))
-                            nums_faltantes = nums_faltantes_priority
-
-                    #############################################################
-                    self.grid.append({
-                        "text": random.choices(nums_faltantes)[0],
-                        "row": row,
-                        "column": col,
-                        "quadrante": qdr,
-                        "preeenchido": False,
-                        "error": False,
-                    })
-
-                    print("")
-                    print("")
-                    print("")
-                    self.order_grid()
-                    self.print_grid()
-                    
-            elif item['row'] is not None:
+                # PULA QUADRANTE DO MEIO
+                if index_quadrante == 4:
+                    continue
                 
-                # REMOVE NUMEROS QUE JA POSSUI NA LINHA
-                row = item['row']
-                list_nums_in_row = list(filter(filter_row, self.grid))
-                nums_in_row = list(map(get_text, list_nums_in_row))
-                nums_faltantes = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(nums_in_row))
-                total_nums_faltantes = len(nums_faltantes)
+                # BUCA ANALISA DO GRID
+                analyze_grid = self.analyze_grid()
+                
+                # DESCOBRE LINHAS E COLUNAS QUE SERAO ANALISADAS
+                rows_available = []
+                cols_available = []
+                if index_quadrante in [0, 1, 2]:
+                    rows_available = [0, 1, 2]
+                elif index_quadrante in [3, 4, 5]:
+                    rows_available = [3, 4, 5]
+                else:
+                    rows_available = [6, 7, 8]
+                
+                if index_quadrante % 3 == 0:
+                    cols_available = [0, 1, 2]
+                elif index_quadrante in [1, 4, 7]:
+                    cols_available = [3, 4, 5]
+                else:
+                    cols_available = [6, 7, 8]
+                
+                # DESCOBRE LINHAS VALIDAS
+                temp = []
+                for i in rows_available:
+                    if num_atual not in analyze_grid["linhas"][i]["numeros_preenchidos"]:
+                        temp.append(i)
+                rows_available = temp
+                
+                # DESCOBRE COLUNAS VALIDAS
+                temp = []
+                for i in cols_available:
+                    if num_atual not in analyze_grid["colunas"][i]["numeros_preenchidos"]:
+                        temp.append(i)
+                cols_available = temp
 
-                for i in range(0, total_nums_faltantes, 1):
+                # BUSCA NUMEROS QUE JA FORAM PREENCHIDOS NO QUADRANTE ATUAL
+                nums_in_qdr = self.get_nums_qdr(index_quadrante, False)
+                list_cels = self.get_col_row(nums_in_qdr) # RETONA ROW X COLUMN
+
+                # DESCOBRE INDEX COL/ROW QUE INICIA O QUADRANTE
+                index_row = 0
+                index_col = 0
+                list_available = []
+                index_beging_col = (index_quadrante % 3) * 3
+                index_beging_row = int(index_quadrante / 3) * 3
+
+                # ANALISA TODAS AS CELULAS DO QUADRANTE
+                for i in range(0, 9, 1):
+                    if i % 3 == 0 and i != 0:
+                        index_row += 1
+                        index_col = 0
+                    elif i != 0:
+                        index_col += 1
                     
-                    list_nums_in_row = list(filter(filter_row, self.grid))
-                    nums_in_row = list(map(get_text, list_nums_in_row))
-                    nums_faltantes = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(nums_in_row))
-
-                    col = self.get_index_col_empty(row)
-
-                    # REMOVE NUMEROS QUE JA POSSUI NA COLUNA
-                    list_nums_in_col = list(filter(filter_col, self.grid))
-                    nums_in_col = list(map(get_text, list_nums_in_col))
-                    nums_faltantes = list(set(nums_faltantes) - set(nums_in_col))
-
-                    # DESCOBRE QUADRANTE
-                    row_qdr = int(row / 3)
-                    qdr = int(col / 3) + (row_qdr * 3)
-
-                    # REMOVE NUMEROS QUE JA POSSUI NO QUADRANTE
-                    nums_in_qdr = self.get_nums_qdr(qdr)
-                    nums_faltantes = list(set(nums_faltantes) - set(nums_in_qdr))
-
-                    #############################################################
-                    list_nums_priority = self.nums_priority(col, row, qdr, False)
-                    if list_nums_priority:
-                        if list(set(nums_faltantes).intersection(list_nums_priority)):
-                            nums_faltantes_priority = list(set(nums_faltantes).intersection(list_nums_priority))
-                            nums_faltantes = nums_faltantes_priority
-
-                    #############################################################
-                    self.grid.append({
-                        "text": random.choices(nums_faltantes)[0],
-                        "row": row,
-                        "column": col,
-                        "quadrante": qdr,
-                        "preeenchido": False,
-                        "error": False,
-                    })
+                    # CELULA ROW X COLUMN
+                    check_cell = [index_beging_row + index_col, index_beging_col + index_row]
                     
-                    print("")
-                    print("")
-                    print("")
-                    self.order_grid()
-                    self.print_grid()
+                    # VERIFICA SE CELULA JA POSSUI CONTEUDO
+                    empty = True
+                    for cell in list_cels:
+                        if cell[0] == check_cell[0] and cell[1] == check_cell[1]:
+                            empty = False
+                            break
+                    if not empty:
+                        continue
+
+                    # VERIFICA SE JA POSSUI NUMERO NO QUADRANTE
+                    if not list_cels:
+                        # NAO POSSUI NUMEROS NO QUADRANTE
+                        list_available.append(check_cell)
+                    
+                    else:
+                        
+                        # POSSUI NUMEROS NO QUADRANTE
+                        # VALIDA SE A CELULA ATUAL É VALIDA
+                        if check_cell[0] in rows_available and check_cell[1] in cols_available:
+                            
+                            # CELULA ESTA DENTRO DE LINHA E COLUNA VALIDA
+                            list_available.append(check_cell)
+                        
+                        else:
+                            # LINHA OU COLUNA NÃO É VALIDA
+                            
+                            # VERIFICA SE A CELULA ESTA DENTRO DA LINHA E COLUNA VALIDA
+                            if check_cell[0] in rows_available and check_cell[1] in cols_available:
+                                print('check_cell:', check_cell, ' rows_available: ', rows_available)
+                                list_available.append(check_cell)
+
+
+                list_available = [list(x) for x in set(tuple(x) for x in list_available)]
+                list_available = sorted(list_available, key=lambda x: [x[0], x[1]])
+
+                #############################################################
+                print('FINAL list_available:', list_available)
+                cell_selected = random.choices(list_available)[0]
+                self.grid.append({
+                    "text": num_atual,
+                    "row": cell_selected[0],
+                    "column": cell_selected[1],
+                    "quadrante": index_quadrante,
+                    "preeenchido": False,
+                    "error": False,
+                })
+
+                print("")
+                print("")
+                print("")
+                self.order_grid()
+                self.print_grid()
 
 
             print("")
@@ -216,7 +200,142 @@ class Grid:
 
         return self.grid
     
-    def nums_priority(self, col:int, row:int, qdr:int, is_col:bool=True) -> list:
+    def analyze_grid(self) -> dict:
+        
+        return_dict = {
+            "quadrantes": {
+                0: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                1: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                2: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                3: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                4: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                5: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                6: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                7: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                8: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+            },
+            "colunas": {
+                0: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                1: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                2: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                3: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                4: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                5: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                6: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                7: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                8: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+            },
+            "linhas": {
+                0: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                1: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                2: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                3: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                4: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                5: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                6: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                7: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+                8: {
+                    "numeros_faltantes": [],
+                    "numeros_preenchidos": [],
+                },
+            }
+        }
+
+        for index in range(0, 9, 1):
+            # BUSCA NUMEROS DO QUADRANTE
+            temp = self.get_nums_qdr(index)
+            return_dict['quadrantes'][index]['numeros_preenchidos'] = temp
+            return_dict['quadrantes'][index]['numeros_faltantes'] = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(temp))
+
+            temp = self.get_nums_col(index)
+            return_dict['colunas'][index]['numeros_preenchidos'] = temp
+            return_dict['colunas'][index]['numeros_faltantes'] = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(temp))
+
+            temp = self.get_nums_row(index)
+            return_dict['linhas'][index]['numeros_preenchidos'] = temp
+            return_dict['linhas'][index]['numeros_faltantes'] = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(temp))
+        
+        return return_dict
+
+    def nums_priority(self, row:int, col:int, qdr:int, is_col:bool=True) -> list:
         
         print("")
         print("")
@@ -345,64 +464,39 @@ class Grid:
         
         return return_nums_priority
     
-    def remove_nums_used(self, list_search:list, qdr:int, col:int, row:int) -> list:
-        
-        list_return = []
-        nums_in_col = self.get_nums_col(col, 9)
-        nums_in_row = self.get_nums_row(9, row)
-        nums_in_qdr = self.get_nums_qdr(qdr, 9)
-        
-        for item in list_search:
-            if item not in nums_in_col and item not in nums_in_row and item not in nums_in_qdr:
-                list_return.append(item)
-        
-        return list_return
-
-    def get_nums_col(self, col:int, row:int) -> list:
-        filter_col = lambda x: x['column'] == col and x['row'] != row
+    def get_nums_col(self, col:int) -> list:
+        filter_col = lambda x: x['column'] == col
         get_text = lambda x: x['text']
 
         list_nums_in_col = list(filter(filter_col, self.grid))
         return list(map(get_text, list_nums_in_col))
 
-    def get_nums_row(self, col:int, row:int) -> list:
-        filter_row = lambda x: x['row'] == row and x['column'] != col
+    def get_nums_row(self, row:int) -> list:
+        filter_row = lambda x: x['row'] == row
         get_text = lambda x: x['text']
 
         list_nums_in_row = list(filter(filter_row, self.grid))
         return list(map(get_text, list_nums_in_row))
 
-    def get_nums_qdr(self, qdr:int, col:int=None, row:int=None) -> list:
-        filter_qdr_col = lambda x: x['quadrante'] == qdr and x['column'] != col
-        filter_qdr_row = lambda x: x['quadrante'] == qdr and x['row'] != row
+    def get_nums_qdr(self, qdr:int, text:bool=True) -> list:
+        filter_qdr = lambda x: x['quadrante'] == qdr
         get_text = lambda x: x['text']
         
-        if col is not None:
-            list_nums_in_qdr = list(filter(filter_qdr_col, self.grid))
-        else:
-            list_nums_in_qdr = list(filter(filter_qdr_row, self.grid))
+        list_nums_in_qdr = list(filter(filter_qdr, self.grid))
+        if text:
+            return list(map(get_text, list_nums_in_qdr))
+        return list_nums_in_qdr
+    
+    def get_col_row(self, list_search:list) -> list:
+        get_col_row = lambda x: [x['row'], x['column']]
+        return list(map(get_col_row, list_search))
 
-        return list(map(get_text, list_nums_in_qdr))
-    
-    def get_index_row_empty(self, col:int) -> int:
-        nums = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        nums_find = []
-        for item in self.grid:
-            if item["column"] == col:
-                nums_find.append(item["row"])
-        result = list(set(nums) - set(nums_find))
-        result = sorted(result)
-        return result[0]
-    
-    def get_index_col_empty(self, row:int) -> int:
-        nums = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        nums_find = []
-        for item in self.grid:
-            if item["row"] == row:
-                nums_find.append(item["column"])
-        result = list(set(nums) - set(nums_find))
-        result = sorted(result)
-        return result[0]
+    def get_num_col_row(self, row:int, col:int) -> str:
+        filter_num = lambda x: x['column'] == col and x['row'] == row
+        get_text = lambda x: x['text']
+        
+        num = list(filter(filter_num, self.grid))
+        return list(map(get_text, num))
 
     def order_grid(self):
         self.grid = sorted(self.grid, key=lambda x: (x["row"], x["column"]))
@@ -440,6 +534,7 @@ class Grid:
         allGrid.append(" ----------------------")
         for i in allGrid:
             print("".join(i))
+
 
 class InputBox:
 
@@ -617,6 +712,7 @@ class InputBox:
             screen.blit(FONT.render(f'8: {probabilidade[7]}', True, COLOR_BLACK), (height, 320))
             screen.blit(FONT.render(f'9: {probabilidade[8]}', True, COLOR_BLACK), (height, 350))
 
+
 # DIFICULDADE DO JOGO
 def set_difficulty(value, difficulty):
     global DIFFICULTY_GAME
@@ -657,7 +753,7 @@ def update_info():
 # GAME
 def start_the_game():
     
-    global NUM_FALTANTES
+    global NUM_FALTANTES, GRID
     
     # FPS
     clock = pygame.time.Clock()
@@ -759,6 +855,8 @@ def start_the_game():
 
     input_boxes = []
     for inputBoxSelect in inputBoxs:
+        # TODO VALIDAR SE ESTA: ROW X COLUMN
+        inputBoxSelect["text"] = GRID.get_num_col_row(inputBoxSelect["position"][0], inputBoxSelect["position"][1])
         input_boxes.append(InputBox(**inputBoxSelect))
 
     while True:
@@ -793,7 +891,8 @@ def start_the_game():
             break
 
 
-GRID = Grid().initialize()
+GRID = Grid()
+GRID.initialize()
 
 # PROPIEDADES SCREEN
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
