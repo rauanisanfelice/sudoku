@@ -1,5 +1,6 @@
 import pygame, random, pygame_menu
 
+from typing import Union
 from pygame.locals import *
 
 pygame.init()
@@ -83,99 +84,27 @@ class Grid:
                     continue
                 
                 # BUCA ANALISA DO GRID
-                analyze_grid = self.analyze_grid()
+                self.analyze_grid(num_atual)
                 
-                # DESCOBRE LINHAS E COLUNAS QUE SERAO ANALISADAS
-                rows_available = []
-                cols_available = []
-                if index_quadrante in [0, 1, 2]:
-                    rows_available = [0, 1, 2]
-                elif index_quadrante in [3, 4, 5]:
-                    rows_available = [3, 4, 5]
-                else:
-                    rows_available = [6, 7, 8]
+                # BUSCA CELULAS DO QUADRANTE QUE ESTÃO DISPONIVEIS
+                list_cells_available = self.result_analyze_grid["celulas"]["quadrantes"][index_quadrante]
+
+                delete_rows, delete_cols = self.cels_priority(num_atual, index_quadrante)
+                print('Linhas que devem ser deletada: ', delete_rows)
+                print('Colunas que devem ser deletada: ', delete_cols)
                 
-                if index_quadrante % 3 == 0:
-                    cols_available = [0, 1, 2]
-                elif index_quadrante in [1, 4, 7]:
-                    cols_available = [3, 4, 5]
-                else:
-                    cols_available = [6, 7, 8]
-                
-                # DESCOBRE LINHAS VALIDAS
-                temp = []
-                for i in rows_available:
-                    if num_atual not in analyze_grid["linhas"][i]["numeros_preenchidos"]:
-                        temp.append(i)
-                rows_available = temp
-                
-                # DESCOBRE COLUNAS VALIDAS
-                temp = []
-                for i in cols_available:
-                    if num_atual not in analyze_grid["colunas"][i]["numeros_preenchidos"]:
-                        temp.append(i)
-                cols_available = temp
-
-                # BUSCA NUMEROS QUE JA FORAM PREENCHIDOS NO QUADRANTE ATUAL
-                nums_in_qdr = self.get_nums_qdr(index_quadrante, False)
-                list_cels = self.get_col_row(nums_in_qdr) # RETONA ROW X COLUMN
-
-                # DESCOBRE INDEX COL/ROW QUE INICIA O QUADRANTE
-                index_row = 0
-                index_col = 0
-                list_available = []
-                index_beging_col = (index_quadrante % 3) * 3
-                index_beging_row = int(index_quadrante / 3) * 3
-
-                # ANALISA TODAS AS CELULAS DO QUADRANTE
-                for i in range(0, 9, 1):
-                    if i % 3 == 0 and i != 0:
-                        index_row += 1
-                        index_col = 0
-                    elif i != 0:
-                        index_col += 1
-                    
-                    # CELULA ROW X COLUMN
-                    check_cell = [index_beging_row + index_col, index_beging_col + index_row]
-                    
-                    # VERIFICA SE CELULA JA POSSUI CONTEUDO
-                    empty = True
-                    for cell in list_cels:
-                        if cell[0] == check_cell[0] and cell[1] == check_cell[1]:
-                            empty = False
-                            break
-                    if not empty:
-                        continue
-
-                    # VERIFICA SE JA POSSUI NUMERO NO QUADRANTE
-                    if not list_cels:
-                        # NAO POSSUI NUMEROS NO QUADRANTE
-                        list_available.append(check_cell)
-                    
-                    else:
-                        
-                        # POSSUI NUMEROS NO QUADRANTE
-                        # VALIDA SE A CELULA ATUAL É VALIDA
-                        if check_cell[0] in rows_available and check_cell[1] in cols_available:
-                            
-                            # CELULA ESTA DENTRO DE LINHA E COLUNA VALIDA
-                            list_available.append(check_cell)
-                        
-                        else:
-                            # LINHA OU COLUNA NÃO É VALIDA
-                            
-                            # VERIFICA SE A CELULA ESTA DENTRO DA LINHA E COLUNA VALIDA
-                            if check_cell[0] in rows_available and check_cell[1] in cols_available:
-                                print('check_cell:', check_cell, ' rows_available: ', rows_available)
-                                list_available.append(check_cell)
-
-
-                list_available = [list(x) for x in set(tuple(x) for x in list_available)]
-                list_available = sorted(list_available, key=lambda x: [x[0], x[1]])
+                if delete_rows:
+                    filter_rows_delete = lambda x: x[0] not in delete_rows
+                    if list(filter(filter_rows_delete, list_cells_available)):
+                        list_cells_available = list(filter(filter_rows_delete, list_cells_available))
+                if delete_cols:
+                    filter_cols_delete = lambda x: x[1] not in delete_cols
+                    if list(filter(filter_cols_delete, list_cells_available)):
+                        list_cells_available = list(filter(filter_cols_delete, list_cells_available))
 
                 #############################################################
-                print('FINAL list_available:', list_available)
-                cell_selected = random.choices(list_available)[0]
+                cell_selected = random.choices(list_cells_available)[0]
+
                 self.grid.append({
                     "text": num_atual,
                     "row": cell_selected[0],
@@ -185,297 +114,347 @@ class Grid:
                     "error": False,
                 })
 
-                print("")
-                print("")
-                print("")
                 self.order_grid()
                 self.print_grid()
-
-
-            print("")
-            print("")
-            print("")
-            self.order_grid()
-            self.print_grid()
+                print('List Available:', list_cells_available)
+                print('Numero:', num_atual, '--> Row:', cell_selected[0], 'Column:', cell_selected[1], 'Quadrante:', index_quadrante)
+                print("")
+                print("")
+                print("")
 
         return self.grid
     
-    def analyze_grid(self) -> dict:
+    def analyze_grid(self, num:int) -> dict:
         
-        return_dict = {
-            "quadrantes": {
-                0: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
+        self.result_analyze_grid = {
+            "numeros": {
+                "quadrantes": {
+                    0: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    1: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    2: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    3: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    4: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    5: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    6: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    7: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    8: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
                 },
-                1: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
+                "colunas": {
+                    0: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    1: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    2: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    3: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    4: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    5: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    6: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    7: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    8: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
                 },
-                2: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                3: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                4: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                5: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                6: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                7: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                8: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
+                "linhas": {
+                    0: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    1: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    2: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    3: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    4: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    5: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    6: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    7: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
+                    8: {
+                        "numeros_faltantes": [],
+                        "numeros_preenchidos": [],
+                    },
                 },
             },
-            "colunas": {
-                0: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                1: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                2: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                3: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                4: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                5: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                6: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                7: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                8: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
+            "celulas": {
+                "quadrantes": {
+                    0: [],
+                    1: [],
+                    2: [],
+                    3: [],
+                    4: [],
+                    5: [],
+                    6: [],
+                    7: [],
+                    8: [],
                 },
             },
-            "linhas": {
-                0: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                1: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                2: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                3: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                4: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                5: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                6: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                7: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-                8: {
-                    "numeros_faltantes": [],
-                    "numeros_preenchidos": [],
-                },
-            }
         }
 
         for index in range(0, 9, 1):
             # BUSCA NUMEROS DO QUADRANTE
             temp = self.get_nums_qdr(index)
-            return_dict['quadrantes'][index]['numeros_preenchidos'] = temp
-            return_dict['quadrantes'][index]['numeros_faltantes'] = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(temp))
+            self.result_analyze_grid['numeros']['quadrantes'][index]['numeros_preenchidos'] = temp
+            self.result_analyze_grid['numeros']['quadrantes'][index]['numeros_faltantes'] = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(temp))
 
             temp = self.get_nums_col(index)
-            return_dict['colunas'][index]['numeros_preenchidos'] = temp
-            return_dict['colunas'][index]['numeros_faltantes'] = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(temp))
+            self.result_analyze_grid['numeros']['colunas'][index]['numeros_preenchidos'] = temp
+            self.result_analyze_grid['numeros']['colunas'][index]['numeros_faltantes'] = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(temp))
 
             temp = self.get_nums_row(index)
-            return_dict['linhas'][index]['numeros_preenchidos'] = temp
-            return_dict['linhas'][index]['numeros_faltantes'] = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(temp))
+            self.result_analyze_grid['numeros']['linhas'][index]['numeros_preenchidos'] = temp
+            self.result_analyze_grid['numeros']['linhas'][index]['numeros_faltantes'] = list(set([1, 2, 3, 4, 5, 6, 7, 8, 9]) - set(temp))
         
-        return return_dict
+        for index in range(0, 9, 1):
+            self.result_analyze_grid['celulas']['quadrantes'][index] = self.analyze_quadrant(index, num)
 
-    def nums_priority(self, row:int, col:int, qdr:int, is_col:bool=True) -> list:
+    def search_rows_cols_available(self, qdr:int, num:int=None) -> Union[list, list]:
         
-        print("")
-        print("")
-        print("")
-        self.print_grid()
+        # DESCOBRE LINHAS E COLUNAS QUE SERAO ANALISADAS
+        rows_available = []
+        cols_available = []
+        if qdr in [0, 1, 2]:
+            rows_available = [0, 1, 2]
+        elif qdr in [3, 4, 5]:
+            rows_available = [3, 4, 5]
+        else:
+            rows_available = [6, 7, 8]
+        
+        if qdr % 3 == 0:
+            cols_available = [0, 1, 2]
+        elif qdr in [1, 4, 7]:
+            cols_available = [3, 4, 5]
+        else:
+            cols_available = [6, 7, 8]
+        
+        # VERIFICA SE DEVE EXCLUIR ALGUM NUMERO
+        if num:
+            # VERIFICA SE JA POSSUI O NUMERO NO QUADRANTE
+            if num in self.result_analyze_grid["numeros"]["quadrantes"][qdr]["numeros_preenchidos"]:
+                return [], []
 
-        nums_priority_qdrs = []
-        nums_priority_cols = []
-        nums_priority_rows = []
-        nums_in_col_01 = []
-        nums_in_col_02 = []
-
-        #############################################################
-        # DA PRIORIDADE NOS NUMEROS DOS PROXIMOS QUADRANTES
-        if is_col:
-            if qdr in [0, 1, 2]:
-                nums_in_qdr_01 = self.get_nums_qdr(qdr + 3, col=col)
-                nums_in_qdr_02 = self.get_nums_qdr(qdr + 6, col=col)
+            # DESCOBRE LINHAS VALIDAS
+            temp = []
+            for i in rows_available:
+                if num not in self.result_analyze_grid["numeros"]["linhas"][i]["numeros_preenchidos"]:
+                    temp.append(i)
+            rows_available = temp
             
-            elif qdr in [3, 4, 5]:
-                nums_in_qdr_01 = self.get_nums_qdr(qdr - 3, col=col)
-                nums_in_qdr_02 = self.get_nums_qdr(qdr + 3, col=col)
+            # DESCOBRE COLUNAS VALIDAS
+            temp = []
+            for i in cols_available:
+                if num not in self.result_analyze_grid["numeros"]["colunas"][i]["numeros_preenchidos"]:
+                    temp.append(i)
+            cols_available = temp
+
+        return rows_available, cols_available
+    
+    def analyze_quadrant(self, qdr:int, num:int) -> list:
+        
+        # DESCOBRE LINHAS E COLUNAS QUE SERAO ANALISADAS
+        rows_available, cols_available = self.search_rows_cols_available(qdr, num)
+
+        # BUSCA NUMEROS QUE JA FORAM PREENCHIDOS NO QUADRANTE ATUAL
+        nums_in_qdr = self.get_nums_qdr(qdr, False)
+        list_cels = self.get_col_row(nums_in_qdr) # RETONA ROW X COLUMN
+
+        # DESCOBRE INDEX COL/ROW QUE INICIA O QUADRANTE
+        index_row = 0
+        index_col = 0
+        list_available = []
+        index_beging_col = (qdr % 3) * 3
+        index_beging_row = int(qdr / 3) * 3
+
+        # ANALISA TODAS AS CELULAS DO QUADRANTE
+        for i in range(0, 9, 1):
+            if i % 3 == 0 and i != 0:
+                index_row += 1
+                index_col = 0
+            elif i != 0:
+                index_col += 1
+            
+            # CELULA ROW X COLUMN
+            check_cell = [index_beging_row + index_col, index_beging_col + index_row]
+
+            # VERIFICA SE JA POSSUI NUMERO NO QUADRANTE
+            if not list_cels:
+                # VALIDA SE CELULA É VALIDA
+                if check_cell[0] in rows_available and check_cell[1] in cols_available:
+                    list_available.append(check_cell)
             
             else:
-                nums_in_qdr_01 = self.get_nums_qdr(qdr - 3, col=col)
-                nums_in_qdr_02 = self.get_nums_qdr(qdr - 6, col=col)
 
-        else:
+                # VERIFICA SE CELULA JA POSSUI CONTEUDO
+                empty = True
+                for cell in list_cels:
+                    if cell[0] == check_cell[0] and cell[1] == check_cell[1]:
+                        empty = False
+                        break
+                if not empty:
+                    continue
 
-            if qdr % 3 == 0:
-                nums_in_qdr_01 = self.get_nums_qdr(qdr + 1, row=row)
-                nums_in_qdr_02 = self.get_nums_qdr(qdr + 2, row=row)
-
-            elif qdr in [1, 4, 7]:
-                nums_in_qdr_01 = self.get_nums_qdr(qdr - 1, row=row)
-                nums_in_qdr_02 = self.get_nums_qdr(qdr + 1, row=row)
-        
-            elif qdr in [2, 5, 8]:
-                nums_in_qdr_01 = self.get_nums_qdr(qdr - 1, row=row)
-                nums_in_qdr_02 = self.get_nums_qdr(qdr - 2, row=row)
-
-        nums_priority_qdrs = list(set(nums_in_qdr_01).intersection(nums_in_qdr_02))
-        
-        # REMOVE NUMEROS JA UTILIZADOS
-        nums_priority_qdrs = self.remove_nums_used(nums_priority_qdrs, qdr, col, row)
-        nums_in_qdr_01 = self.remove_nums_used(nums_in_qdr_01, qdr, col, row)
-        nums_in_qdr_02 = self.remove_nums_used(nums_in_qdr_02, qdr, col, row)
-
-        #############################################################
-        # DA PRIORIDADE NOS NUMEROS DAS PROXIMAS COLUNAS
-        if col % 3 == 0:
-            nums_in_col_01 = self.get_nums_col(col + 1, row)
-            nums_in_col_02 = self.get_nums_col(col + 2, row)
-            
-            if nums_in_col_01 or nums_in_col_02:
-                nums_priority_cols = list(set(nums_in_col_01).intersection(nums_in_col_02))
-
-        elif col in [1, 4, 7]:
-            
-            nums_priority_cols = self.get_nums_col(col + 1, row)
-
-        elif col in [2, 5, 8]:
-            
-            nums_in_col_01 = self.get_nums_col(col - 1, row)
-            nums_in_col_02 = self.get_nums_col(col - 2, row)
-            
-            if nums_in_col_01 or nums_in_col_02:
-                nums_priority_cols = list(set(nums_in_col_01).intersection(nums_in_col_02))
-        
-        # REMOVE NUMEROS JA UTILIZADOS
-        nums_priority_cols = self.remove_nums_used(nums_priority_cols, qdr, col, row)
-        nums_in_col_01 = self.remove_nums_used(nums_in_col_01, qdr, col, row)
-        nums_in_col_02 = self.remove_nums_used(nums_in_col_02, qdr, col, row)
-
-
-        #############################################################
-        # DA PRIORIDADE NOS NUMEROS DAS PROXIMAS LINHAS
-        if row % 3 == 0:
-            nums_in_row_01 = self.get_nums_row(col, row + 1)
-            nums_in_row_02 = self.get_nums_row(col, row + 2)
-            
-            if nums_in_row_01 or nums_in_row_02:
-                nums_priority_rows = list(set(nums_in_row_01).intersection(nums_in_row_02))
-
-        elif row in [1, 4, 7]:
-            
-            nums_priority_rows = self.get_nums_row(col, row + 1)
-
-        elif row in [2, 5, 8]:
-            
-            nums_in_row_01 = self.get_nums_row(col, row - 1)
-            nums_in_row_02 = self.get_nums_row(col, row - 2)
-            
-            if nums_in_row_01 or nums_in_row_02:
-                nums_priority_rows = list(set(nums_in_row_01).intersection(nums_in_row_02))
-        
-        # REMOVE NUMEROS JA UTILIZADOS
-        nums_priority_rows = self.remove_nums_used(nums_priority_rows, qdr, col, row)
-
-        # ANALISA O CENARIO
-        return_nums_priority = []
-        if list(set(nums_priority_qdrs).intersection(nums_priority_cols).intersection(nums_priority_rows)):
-            print("00")
-            return_nums_priority = list(set(nums_priority_qdrs).intersection(nums_priority_cols).intersection(nums_priority_rows))
-        
-        else:
-            if nums_priority_cols:
-                if list(set(nums_priority_cols).intersection(nums_in_qdr_02)):
-                    print("01")
-                    return_nums_priority = list(set(nums_priority_cols).intersection(nums_in_qdr_02))
+                # POSSUI NUMEROS NO QUADRANTE
+                # VALIDA SE A CELULA ATUAL É VALIDA
+                if check_cell[0] in rows_available and check_cell[1] in cols_available:
+                    
+                    # CELULA ESTA DENTRO DE LINHA E COLUNA VALIDA
+                    list_available.append(check_cell)
+                
                 else:
-                    print("02")
-                    return_nums_priority = nums_priority_cols
-            elif list(set(nums_in_qdr_01).intersection(nums_in_qdr_02)):
-                print("03")
-                return_nums_priority = list(set(nums_in_qdr_01).intersection(nums_in_qdr_02))
-            elif list(set(nums_in_qdr_02).intersection(nums_priority_cols)):
-                print("04")
-                return_nums_priority = list(set(nums_in_qdr_02).intersection(nums_priority_cols))
-            elif list(set(nums_in_qdr_01).intersection(nums_priority_cols)):
-                print("05")
-                return_nums_priority = list(set(nums_in_qdr_01).intersection(nums_priority_cols))
-            elif nums_in_qdr_02:
-                print("06")
-                return_nums_priority = nums_in_qdr_02
-        
-        return return_nums_priority
+                    # LINHA OU COLUNA NÃO É VALIDA
+                    
+                    # VERIFICA SE A CELULA ESTA DENTRO DA LINHA E COLUNA VALIDA
+                    if check_cell[0] in rows_available and check_cell[1] in cols_available:
+                        print('check_cell:', check_cell, ' rows_available: ', rows_available)
+                        list_available.append(check_cell)
+
+
+        list_available = [list(x) for x in set(tuple(x) for x in list_available)]
+        list_available = sorted(list_available, key=lambda x: [x[0], x[1]])
+        return list_available
     
-    def get_nums_col(self, col:int) -> list:
+    def cels_priority(self, num:int, qdr:int) -> Union[list, list]:
+        """ 
+        # Cenario 1
+        O num. 4 no quadrante 5 pode ser nas celulas com (*).
+        No quadrante 3, obrigatoriamente tem que dar prioridade no num. 4 nas celulas [5, 1] ou [5, 2]
+        ----------------------
+        | | | |-|3|1|2|-| |4| |
+        |4|1|2|-| | | |-| | |3|
+        | |3| |-|4| | |-|1|2| |
+        ----------------------
+        | | |1|-|2|3|5|-|*| |*|
+        | |2|3|-|6|9|4|-| |1| |
+        | | | |-|8|7|1|-|3| |2|
+        ----------------------
+        |2| | |-| | | |-| |3|1|
+        |1| | |-| | |3|-|2| | |
+        |3| | |-|1|2| |-| | | |
+        ----------------------
+        """
+        
+        # ANALISA OS PROXIMOS QUADRANTES SE POSSUI UM QUADRANTE
+        # COM SOMENTE UMA POSSIBILIDADE PARA O NUMERO ATUAL
+        # E EXCLUI A LINHA OU COLUNA DESTA UNICA CELULA
+        find_row = lambda x: x[0]
+        find_cols = lambda x: x[1]
+
+        delete_rows = []
+        delete_cols = []
+        
+        if qdr == 8:
+            return delete_rows, delete_cols
+        
+        for i in range(qdr + 1, 9, 1):
+            
+            # ANALISA SOMENTE QUANDO POSSUI DUAS CELULAS DISPONIVEIS PARA O VALOR
+            cells_available = self.result_analyze_grid["celulas"]["quadrantes"][i]
+            if len(cells_available) == 2:
+                print('Numero:', num, 'Quadrante: ', i)
+                tmp_rows = list(map(find_row, cells_available))
+                tmp_cols = list(map(find_cols, cells_available))
+                
+                # AS DUAS CELULAS DISPONIVEIS ESTAO NA MESMA LINHA 
+                # ENTAO DEVE EXCLUIR AS COLUNAS
+                if tmp_rows[0] == tmp_rows[1]:
+                    delete_cols = tmp_cols
+                
+                # AS DUAS CELULAS DISPONIVEIS ESTAO NA MESMA COLUNA 
+                # ENTAO DEVE EXCLUIR AS LINHAS
+                elif tmp_cols[0] == tmp_cols[1]:
+                    delete_rows = tmp_rows
+
+        return delete_rows, delete_cols
+
+    def get_nums_col(self, col:int, row_ignore:int=None) -> list:
         filter_col = lambda x: x['column'] == col
+        filter_col_ignore_row = lambda x: x['column'] == col and  x['row'] != row_ignore
         get_text = lambda x: x['text']
 
-        list_nums_in_col = list(filter(filter_col, self.grid))
+        if row_ignore is not None:
+            list_nums_in_col = list(filter(filter_col, self.grid))
+        else: 
+            list_nums_in_col = list(filter(filter_col_ignore_row, self.grid))
+        
         return list(map(get_text, list_nums_in_col))
 
-    def get_nums_row(self, row:int) -> list:
+    def get_nums_row(self, row:int, col_ignore:int=None) -> list:
         filter_row = lambda x: x['row'] == row
+        filter_row_ignore_col = lambda x: x['row'] == row
         get_text = lambda x: x['text']
-
-        list_nums_in_row = list(filter(filter_row, self.grid))
+        
+        if col_ignore is not None:
+            list_nums_in_row = list(filter(filter_row, self.grid))
+        else:
+            list_nums_in_row = list(filter(filter_row_ignore_col, self.grid))
+        
         return list(map(get_text, list_nums_in_row))
 
     def get_nums_qdr(self, qdr:int, text:bool=True) -> list:
@@ -486,7 +465,7 @@ class Grid:
         if text:
             return list(map(get_text, list_nums_in_qdr))
         return list_nums_in_qdr
-    
+
     def get_col_row(self, list_search:list) -> list:
         get_col_row = lambda x: [x['row'], x['column']]
         return list(map(get_col_row, list_search))
