@@ -32,21 +32,8 @@ BIG_SQUARE_SIZE = (SMALL_SQUARE_SIZE * 3) + SIZE_DIVISION_BIG_SQUARE
 ERROS = 0
 NUM_FALTANTES = 81
 NUM_PREENCHIDOS = 0
-# GRID = [
-#     [8, 7, 9, 6, 5, 1, 3, 2, 4],
-#     [5, 2, 3, 7, 4, 9, 1, 8, 6],
-#     [1, 6, 4, 2, 3, 8, 7, 9, 5],
-    
-#     [6, 9, 5, 1, 2, 7, 8, 4, 3],
-#     [3, 1, 7, 8, 9, 4, 6, 5, 2],
-#     [2, 4, 8, 5, 6, 3, 9, 1, 7],
-    
-#     [4, 3, 1, 9, 7, 5, 2, 6, 8],
-#     [9, 5, 6, 3, 8, 2, 4, 7, 1],
-#     [7, 8, 2, 4, 1, 6, 5, 3, 9]
-# ]
 
-        
+
 
 class Grid:
 
@@ -236,6 +223,7 @@ class InputBox:
             NUM_PREENCHIDOS += 1
             self.color = COLOR_ACTIVE
             self.error = False
+            GRID.grid[GRID.grid.index(cell)]['preenchido'] = True
 
     def analyze(self, screen):
         if self.active:
@@ -244,11 +232,11 @@ class InputBox:
             result = GRID.analyze_grid(self.position[0], self.position[1])
             numeros_faltantes = list(set(result['quadrants']['numeros_faltantes']).intersection(result['columns']['numeros_faltantes']).intersection(result['rows']['numeros_faltantes']))
 
-            width = 110
-            for num in range(1, 9, 1):
-                
+            width = 120
+            for num in range(1, 10, 1):
+                percent = round(float((len(numeros_faltantes) * 100 / 9)), 2)
                 if num in numeros_faltantes:
-                    screen.blit(FONT.render(f'{num}: 100%', True, COLOR_BLACK), (height, width))
+                    screen.blit(FONT.render(f'{num}: {percent}%', True, COLOR_BLACK), (height, width))
                 else:
                     screen.blit(FONT.render(f'{num}: 0%', True, COLOR_BLACK), (height, width))
                 width += 30
@@ -293,8 +281,12 @@ def update_info():
 # GAME
 def start_the_game():
     
-    global NUM_FALTANTES, GRID
+    global NUM_FALTANTES, GRID, ERROS
     
+    NUM_FALTANTES = 81
+    ERROS = 0
+    NUM_PREENCHIDOS = 0
+
     # FPS
     clock = pygame.time.Clock()
     draw_scenario()
@@ -398,12 +390,12 @@ def start_the_game():
         
         if random.choices([0, 1], weights=DIFFICULTY_GAME, k=1)[0] == 1:
             text = ""
-            NUM_FALTANTES -= 1
         
         else:
             cell = GRID.get_num_row_col(inputBoxSelect["position"][0], inputBoxSelect["position"][1])
             text = str(cell['text'])
             GRID.grid[GRID.grid.index(cell)]['preenchido'] = True
+            NUM_FALTANTES -= 1
 
         inputBoxSelect["text"] = text
         input_boxes.append(InputBox(**inputBoxSelect))
