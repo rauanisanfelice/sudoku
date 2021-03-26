@@ -6,6 +6,8 @@ from pygame.locals import *
 pygame.init()
 FONT = pygame.font.Font(None, 42)
 
+DEVELOPER_GAME = 0
+DEVELOPER_GAME_TEXT = [('Não', 0), ('Sim', 1)]
 DIFFICULTY_GAME_TEXT = [('Fácil', 0), ('Normal', 1), ('Difícil', 2)]
 DIFFICULTY_GAME_WEIGHTS = [[50, 50], [60, 40], [70, 30]]
 DIFFICULTY_GAME = DIFFICULTY_GAME_WEIGHTS[0]
@@ -241,11 +243,45 @@ class InputBox:
                     screen.blit(FONT.render(f'{num}: 0%', True, COLOR_BLACK), (height, width))
                 width += 30
 
+
+class Button:
+
+    def __init__(self, x:float, y:float, w:float, h:float, text:str):
+        self.text = FONT.render(text, True , COLOR_BLACK)
+        self.x = x
+        self.y = y
+        self.width = w
+        self.height = h
+    
+    def is_press(self, mouse):
+        
+        if self.x <= mouse[0] <= self.x + self.height and self.y <= mouse[1] <= self.y + self.width:
+            return True
+        return False
+    
+    def is_hover(self, mouse):
+        
+        if self.x <= mouse[0] <= self.x + self.height and self.y <= mouse[1] <= self.y + self.width:
+            pygame.draw.rect(screen, COLOR_ACTIVE, [self.x, self.y, self.height, self.width])
+        else:
+            pygame.draw.rect(screen, COLOR_INACTIVE, [self.x, self.y, self.height, self.width])
+        
+        # superimposing the text onto our button
+        screen.blit(self.text, (self.x + (self.height / 5), self.y + (self.width / 5)))
+
+    
 # DIFICULDADE DO JOGO
 def set_difficulty(value, difficulty):
     global DIFFICULTY_GAME
     DIFFICULTY_GAME = DIFFICULTY_GAME_WEIGHTS[difficulty]
     print('Dificuldade: ', DIFFICULTY_GAME_TEXT[difficulty][0])
+
+
+# MODO DESENVOLVEDOR DO JOGO
+def set_developer(value, developer):
+    global DEVELOPER_GAME
+    DEVELOPER_GAME = developer
+    print('Modo desenvolvedor: ', DEVELOPER_GAME_TEXT[developer][0])
 
 
 def draw_scenario():
@@ -281,13 +317,12 @@ def update_info():
 # GAME
 def start_the_game():
     
-    global NUM_FALTANTES, GRID, ERROS
+    global DEVELOPER_GAME, NUM_FALTANTES, GRID, ERROS
     
     NUM_FALTANTES = 81
     ERROS = 0
     NUM_PREENCHIDOS = 0
 
-    # FPS
     clock = pygame.time.Clock()
     draw_scenario()
 
@@ -400,17 +435,28 @@ def start_the_game():
         inputBoxSelect["text"] = text
         input_boxes.append(InputBox(**inputBoxSelect))
 
+    btn_sair = Button(x=SCREEN_WIDTH-10-100, y=SCREEN_HEIGHT-10-50, w=50, h=100, text='Sair')
+
     while True:
         
         # FPS  
         clock.tick(30)
         
+        # MOUSE COORDINATES INFO
+        mouse = pygame.mouse.get_pos()
+
         # VERIFICA EVENTOS
         for event in pygame.event.get():
             # SAIR
             if event.type == QUIT:
                 pygame.quit()
+                exit()
             
+            # MOUSE
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if btn_sair.is_press(mouse):
+                    return
+
             # VERIFICA SE BOX ESTA SELECIONADA
             for box in input_boxes:
                 box.handle_event(event)
@@ -418,7 +464,10 @@ def start_the_game():
         screen.fill((30, 30, 30))
         for box in input_boxes:
             box.draw(screen)
-            box.analyze(screen)
+            if DEVELOPER_GAME == 1:
+                box.analyze(screen)
+
+        btn_sair.is_hover(mouse)
 
         pygame.display.flip()
         
@@ -441,6 +490,7 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 # MENU
 menu = pygame_menu.Menu(SCREEN_HEIGHT, SCREEN_WIDTH, 'Bem Vindo(a)!', theme=pygame_menu.themes.THEME_GREEN)
 menu.add_selector('Dificuldade :', DIFFICULTY_GAME_TEXT, onchange=set_difficulty)
+menu.add_selector('Desenvolvedor :', DEVELOPER_GAME_TEXT, onchange=set_developer)
 menu.add_button('Jogar', start_the_game)
 menu.add_button('Sair', pygame_menu.events.EXIT)
 menu.mainloop(screen)
