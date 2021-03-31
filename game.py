@@ -73,7 +73,7 @@ class Grid:
                 })
 
         self.order_grid()
-        self.print_grid()
+        # self.print_grid()
 
         return self.grid
     
