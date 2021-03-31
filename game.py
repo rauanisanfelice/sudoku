@@ -233,12 +233,19 @@ class InputBox:
             
             result = GRID.analyze_grid(self.position[0], self.position[1])
             numeros_faltantes = list(set(result['quadrants']['numeros_faltantes']).intersection(result['columns']['numeros_faltantes']).intersection(result['rows']['numeros_faltantes']))
+            percentual_quadrants = round((1 / len(result['quadrants']['numeros_faltantes'])) * 100, 2) if len(result['quadrants']['numeros_faltantes']) != 0 else float(0)
+            percentual_columns = round((1 / len(result['columns']['numeros_faltantes'])) * 100, 2) if len(result['columns']['numeros_faltantes']) != 0 else float(0)
+            percentual_rows = round((1 / len(result['rows']['numeros_faltantes'])) * 100, 2) if len(result['rows']['numeros_faltantes']) != 0 else float(0)
+            percentual_all = round((1 / len(numeros_faltantes)) * 100, 2) if len(numeros_faltantes) != 0 else float(0)
+            percentual_avg = round((percentual_quadrants + percentual_columns + percentual_rows + percentual_all) / 4, 2)
 
             width = 120
             for num in range(1, 10, 1):
-                percent = round(float((len(numeros_faltantes) * 100 / 9)), 2)
                 if num in numeros_faltantes:
-                    screen.blit(FONT.render(f'{num}: {percent}%', True, COLOR_BLACK), (height, width))
+                    if len(numeros_faltantes) == 1:
+                        screen.blit(FONT.render(f'{num}: 100%', True, COLOR_BLACK), (height, width))
+                    else:
+                        screen.blit(FONT.render(f'{num}: {percentual_avg}%', True, COLOR_BLACK), (height, width))
                 else:
                     screen.blit(FONT.render(f'{num}: 0%', True, COLOR_BLACK), (height, width))
                 width += 30
