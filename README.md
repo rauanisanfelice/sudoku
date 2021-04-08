@@ -2,8 +2,11 @@
 Python game Sudoku
 
 
-## Tela de Login
-![Tela Login](https://raw.githubusercontent.com/rauanisanfelice/django-api-ecommerce/develop/img/Tela_02.png)
+## Tela de Menu
+![Tela Login](https://raw.githubusercontent.com/rauanisanfelice/sudoku/develop/img/Menu.png)
+
+## Tela do Jogo
+![Tela Login](https://raw.githubusercontent.com/rauanisanfelice/sudoku/develop/img/Jogo.png)
 
 
 ## Instruções
